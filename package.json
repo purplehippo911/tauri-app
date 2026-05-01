@@ -10,6 +10,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@tauri-apps/plugin-notification": "^2.3.3",
     "sass-embedded": "^1.99.0",
     "vue": "^3.5.13",
     "@tauri-apps/api": "^2",

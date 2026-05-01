@@ -3,6 +3,7 @@
   "specifiers": {
     "npm:@tauri-apps/api@2": "2.11.0",
     "npm:@tauri-apps/cli@2": "2.11.0",
+    "npm:@tauri-apps/plugin-notification@^2.3.3": "2.3.3",
     "npm:@tauri-apps/plugin-opener@2": "2.5.3",
     "npm:@vitejs/plugin-vue@^5.2.1": "5.2.4_vite@6.4.2__sass-embedded@1.99.0_vue@3.5.33__typescript@5.6.3_sass-embedded@1.99.0",
     "npm:sass-embedded@^1.99.0": "1.99.0",
@@ -457,6 +458,12 @@
         "@tauri-apps/cli-win32-x64-msvc"
       ],
       "bin": true
+    },
+    "@tauri-apps/plugin-notification@2.3.3": {
+      "integrity": "sha512-Zw+ZH18RJb41G4NrfHgIuofJiymusqN+q8fGUIIV7vyCH+5sSn5coqRv/MWB9qETsUs97vmU045q7OyseCV3Qg==",
+      "dependencies": [
+        "@tauri-apps/api"
+      ]
     },
     "@tauri-apps/plugin-opener@2.5.3": {
       "integrity": "sha512-CCcUltXMOfUEArbf3db3kCE7Ggy1ExBEBl51Ko2ODJ6GDYHRp1nSNlQm5uNCFY5k7/ufaK5Ib3Du/Zir19IYQQ==",
@@ -996,6 +1003,7 @@
       "dependencies": [
         "npm:@tauri-apps/api@2",
         "npm:@tauri-apps/cli@2",
+        "npm:@tauri-apps/plugin-notification@^2.3.3",
         "npm:@tauri-apps/plugin-opener@2",
         "npm:@vitejs/plugin-vue@^5.2.1",
         "npm:sass-embedded@^1.99.0",
