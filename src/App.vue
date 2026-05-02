@@ -1,21 +1,23 @@
 <template>
   <main>
     <section class="clock-section">
+      <h1 v-if="isBreak" class="break-text"> BREAK TIME!!!!</h1>
       <div class="clock-section__clock-display"> 
-        <h3 class="clock-display__time"> {{minutes}} : {{seconds}}</h3>
+        <h3 contentEditable="true" class="clock-display__time" @blur="userMinutes($event)" ref="minutesEl"> {{displayMinutes}} </h3>
+        <h3 class="clock-display__time"> : </h3>
+        <h3 class="clock-display__time"> {{displaySeconds}} </h3>
       </div>
       <div class="clock-section__buttons">
-        <button @click="start"> Start </button>
-        <button @click="pause"> Pause </button>
+        <button @click="start" v-if="!isRunning && !isBreak"> Start </button>
+        <button @click="pause" v-if="isRunning && !isBreak"> Pause </button>
         <button @click="restart"> Restart </button>
-        <audio ref="audioElement" controls loop src="./src/assets/beta_waves.mp3"> 
-        </audio>
+        <button @click="playFocusMusic" v-if="!isBreak"> {{ isPlaying ? 'X' : '🎵'}}</button>
       </div>
     </section>
     
     <section class="todo-section">
-      <form id="form"  @submit.prevent="addTodo">
-      <input id="todoInput" v-model="todoInput" placeholder="Write your tasks" />
+      <form id="form" @submit.prevent="addTodo">
+        <input id="todoInput" v-model="todoInput" placeholder="Write your tasks" />
       </form>
       <ul class="todo-container">
         <li class="todo-item" v-for="(todo, index) in todos" :key="index"> 
@@ -24,131 +26,250 @@
         </li>
       </ul>
     </section>
-    
   </main>
 </template>
-<script >
-  import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification'
 
+<script>
+import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification'
 
 export default {
- data() {
- return {
- minutes: 24,
- seconds: 59,
- isRunning: false,
- intervalId: null,
- intervalId2: null,
- todos: [],
- todoInput: "",
- alarmSound: new Audio("/src/assets/alarm.wav"),
- relaxSound: new Audio("/src/assets/relaxing.mp3")
- }
- },
-  async mounted() {
-  const saved = localStorage.getItem('todos')
-  if (saved) {
-  this.todos = JSON.parse(saved)
-  }
-  },
- methods: {
-  sleep(ms) {
-    new Promise(resolve => setTimeout(resolve, ms))
+  data() {
+    return {
+      minutes: 24,
+      seconds: 0,
+      displayMinutes: '25',
+      displaySeconds: '00',
+      isRunning: false,
+      intervalId: null,
+      intervalId2: null,
+      todos: [],
+      todoInput: "",
+      alarmSound: new Audio("assets/alarm.wav"),
+      relaxSound: new Audio("assets/relaxing.mp3"),
+      focusSound: new Audio("assets/beta_waves.mp3"),
+      isPlaying: false,
+      isBreak: false 
+    }
   },
   
-  start() {
-    if (this.minutes <= 0) return; // do nothing if already 0
-    this.isRunning = true;
-    this.relaxSound.pause();
-    this.relaxSound.currentTime = 0;
-    if(this.seconds == "00") {this.seconds = 59};
+  async mounted() {
+    const saved = localStorage.getItem('todos')
+    if (saved) {
+      this.todos = JSON.parse(saved)
+    }
+  },
 
-    this.intervalId = setInterval(() => {
-      this.minutes--;
-
-      if (this.minutes<= 0) { 
-        clearInterval(this.intervalId);
-      }
-    }, 60000);
-
-    this.intervalId2 = setInterval(() => {
-    this.seconds--;
-
-      if(this.seconds <= 0 && this.seconds != "00") {
-      this.seconds = 60
-      }
-
-      if(this.seconds <= 0 && this.minutes <= 0) {
-      clearInterval(this.intervalId2);
-      this.alarmSound.play().catch(err => {
-     alert('Audio play failed', err)
-      });
-      this.notifyPomodoroEnd();
-      this.$refs.audioElement.pause();
-      this.$refs.audioElement.currentTime = 0;
-      this.relaxSound.play().catch(err => {
-      alert('Relx audio failed', err)
-      });
-      alert("Break time!")
-      }
-    }, 1000)
+  watch: {
+    minutes(newVal) {
+      this.displayMinutes = newVal.toString().padStart(2, '0');
     },
-  pause() {
-  if (this.intervalId) {
-    clearInterval(this.intervalId);
-    clearInterval(this.intervalId2);
-    this.intervalId = null;
-    this.intervalId2 = null;
-  }
+    seconds(newVal) {
+      this.displaySeconds = newVal.toString().padStart(2, '0');
+    },
+    todos: {
+      handler() {
+        localStorage.setItem('todos', JSON.stringify(this.todos))
+      },
+      deep: true
+    }
   },
-  restart() {
-  this.pause();
-  this.minutes = 24;
-  this.seconds = "00"
-  },
-  addTodo() {
-  if(this.todoInput.trim() != "") {
-  this.todos.push(this.todoInput);
-  this.todoInput= "";
 
-  localStorage.setItem('todos', JSON.stringify(this.todos))
-  }
-  },
-  removeTodo(index) {
-  this.todos.splice(index, 1)
-  localStorage.setItem('todos', JSON.stringify(this.todos))
-  },
-  async notifyPomodoroEnd() {
-  let permissionGranted = await isPermissionGranted();
-  if(!permissionGranted) {
-    const permission = await requestPermission();
-    permissionGranted = permission === 'granted';
-  }
+  methods: {
+    playFocusMusic() {
+      if(!this.isPlaying) {
+        this.focusSound.play();
+        this.isPlaying = true;
+      } else {
+        this.focusSound.pause();
+        this.focusSound.currentTime = 0;
+        this.isPlaying = false;
+      }
+    },
 
-  if (permissionGranted) {
-  sendNotification({
-  title: 'Pomodoro done!',
-  body: 'Time for a break.'
-  });
+    userMinutes(event) {
+      const text = event.target.innerText.trim();
+      const num = parseInt(text);
+      if (!isNaN(num) && num >= 0 && num <= 60) {
+        this.minutes = num;
+      } else {
+        event.target.innerText = this.displayMinutes;
+      }
+    },
+
+    stopSounds() {
+      this.focusSound.pause();
+      this.focusSound.currentTime = 0;
+      this.relaxSound.pause();
+      this.relaxSound.currentTime = 0;
+    },
+
+    startBreakTimer() {
+      this.isRunning = true;
+      this.isBreak = true;
+      this.seconds = 59;
+      this.minutes = 25; 
+
+      // Break minutes (60s interval)
+      this.intervalId = setInterval(() => {
+        if (this.isRunning) {
+          this.minutes--;
+          if (this.minutes <= 0) {
+            clearInterval(this.intervalId);
+          }
+        }
+      }, 60000);
+
+      // Break seconds (1s interval)
+      this.intervalId2 = setInterval(() => {
+        if (this.isRunning) {
+          this.seconds--;
+          
+          if (this.seconds < 0) {
+            this.seconds = 59;
+          }
+
+          // Break finished
+          if (this.minutes <= 0 && this.seconds <= 0) {
+            clearInterval(this.intervalId);
+            clearInterval(this.intervalId2);
+            this.isRunning = false;
+            this.isBreak = false;
+            alert("Break over! Ready to work?");
+            this.minutes = 25;
+            this.seconds = 0;
+          }
+        }
+      }, 1000);
+    },
+
+    start() {
+      if (this.minutes <= 0) return;
+      
+      this.isRunning = true;
+      this.isBreak = false;
+      this.stopSounds();
+      this.seconds = 59;
+
+      this.intervalId = setInterval(() => {
+        if (this.isRunning && !this.isBreak) {
+          this.minutes--;
+          if (this.minutes <= 0) {
+            clearInterval(this.intervalId);
+          }
+        }
+      }, 60000);
+
+      this.intervalId2 = setInterval(() => {
+        if (this.isRunning && !this.isBreak) {
+          this.seconds--;
+          
+          if (this.seconds < 0) {
+            this.seconds = 59;
+          }
+
+          if (this.minutes <= 0 && this.seconds <= 0) {
+            this.timerComplete();
+          }
+        }
+      }, 1000);
+    },
+
+    timerComplete() {
+      clearInterval(this.intervalId);
+      clearInterval(this.intervalId2);
+      this.isRunning = false;
+      
+      this.alarmSound.play().catch(err => {
+        alert('Audio play failed', err);
+      });
+      
+      this.notifyPomodoroEnd();
+      this.stopSounds();
+      
+      this.relaxSound.play().catch(err => {
+        alert('Relax audio failed', err);
+      });
+      
+      // Auto start break after 2 seconds
+      setTimeout(() => {
+        alert("Break time!");
+        this.startBreakTimer();
+      }, 2000);
+    },
+
+    pause() {
+      if (this.intervalId) {
+        clearInterval(this.intervalId);
+        clearInterval(this.intervalId2);
+        this.intervalId = null;
+        this.intervalId2 = null;
+        this.isRunning = false;
+        this.stopSounds();
+      }
+    },
+
+    restart() {
+      this.pause();
+      this.isRunning = false;
+      this.isBreak = false;
+      this.minutes = 24;
+      this.seconds = 0;
+      this.stopSounds();
+    },
+
+    addTodo() {
+      if (this.todoInput.trim() !== "") {
+        this.todos.push(this.todoInput);
+        this.todoInput = "";
+      }
+    },
+
+    removeTodo(index) {
+      this.todos.splice(index, 1);
+    },
+
+    async notifyPomodoroEnd() {
+      let permissionGranted = await isPermissionGranted();
+      if (!permissionGranted) {
+        const permission = await requestPermission();
+        permissionGranted = permission === 'granted';
+      }
+
+      if (permissionGranted) {
+        sendNotification({
+          title: 'Pomodoro done!',
+          body: 'Time for a break.'
+        });
+      }
+    }
   }
-  }
- },
- // auto-save on any change
- watch: {
- todos: {
- handler() {
- localStorage.setItem('todos', JSON.stringify(this.todos))
- },
- deep: true
- }
- }
 }
-
 </script>
 
-
+<!-- Your exact same styles unchanged -->
+<style>
+/* ... your full styles here - unchanged ... */
+</style>
 
 <style >
+
+@keyframes break-text-animation {
+  0% {
+    margin-right: 2rem;
+  }
+  50% {
+    margin-right: 10rem;
+  }
+  100% {
+    margin-right: 100rem;
+  }
+}
+
+.break-text {
+  text-align: center;
+  font-size: 2rem;
+  animation: break-text-animation;
+}
 
 body {
   background: black;
@@ -170,24 +291,27 @@ body {
   .clock-section__clock-display {
     padding: 1rem 2rem;
     display: flex;
-    flex-direction: column;
+    font-size: 1rem;
     align-items: center;
     justify-content: center;
+    gap: .5rem;
     border: 2px solid yellow;
     border-radius: 2rem;
   }
 
   .clock-display__time{
     font-size: 2.5rem;
+    max-height: 4rem;
   }
 
   .clock-section__buttons {
     margin-top: 1rem;
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 2rem;
   }
-
+  
   button {
     border: 2px solid yellow;
     padding: .8rem;

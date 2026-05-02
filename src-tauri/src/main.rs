@@ -1,11 +1,11 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-use tauri_plugin_notification::init;
+
+use tauri_plugin_notification; // Add if not auto-imported
 
 fn main() {
-    tauri::Builder::default()
-        .plugin(init())
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-    //tauri_app_lib::run()
+  tauri::Builder::default()
+    .plugin(tauri_plugin_notification::init())
+    .run(tauri::generate_context!())
+    .expect("error while running tauri application");
 }
